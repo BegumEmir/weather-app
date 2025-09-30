@@ -1,34 +1,41 @@
+// server.js
 const express = require("express");
 const axios = require("axios");
 const cors = require("cors");
 require("dotenv").config();
 
 const app = express();
-const PORT = 3000;
 
-app.use(cors());
+// Güvenlik için sadece kendi GitHub Pages domaininden gelen istekleri kabul et
+app.use(cors({ origin: "https://begumemir.github.io" }));
 
-// API endpoint: /api/weather
+const PORT = process.env.PORT || 3000;
+
+// /api/weather endpoint'i
 app.get("/api/weather", async (req, res) => {
   const city = req.query.city;
-  console.log("İstekte gelen city:", city); // şehir geliyor mu?
   const apiKey = process.env.OPENWEATHER_API_KEY;
-  console.log("Kullanılan API KEY:", apiKey ? "Var" : "YOK");
 
   if (!city) {
     return res.status(400).json({ error: "City is required" });
   }
+  if (!apiKey) {
+    return res.status(500).json({ error: "API key missing" });
+  }
 
   try {
-    const currentWeatherUrl = `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}`;
-    console.log("Current Weather URL:", currentWeatherUrl);
+    // API istekleri
+    const currentWeatherUrl = `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(
+      city
+    )}&appid=${apiKey}`;
+    const forecastUrl = `https://api.openweathermap.org/data/2.5/forecast?q=${encodeURIComponent(
+      city
+    )}&appid=${apiKey}`;
 
-    const forecastUrl = `https://api.openweathermap.org/data/2.5/forecast?q=${city}&appid=${apiKey}`;
-    console.log("Forecast URL:", forecastUrl);
-
-    const currentResponse = await axios.get(currentWeatherUrl);
-    const forecastResponse = await axios.get(forecastUrl);
-
+    const [currentResponse, forecastResponse] = await Promise.all([
+      axios.get(currentWeatherUrl),
+      axios.get(forecastUrl),
+    ]);
 
     res.json({
       current: currentResponse.data,
@@ -36,17 +43,16 @@ app.get("/api/weather", async (req, res) => {
     });
   } catch (error) {
     if (error.response) {
-        console.error("HATA STATUS:", error.response.status);
-        console.error("HATA DATA:", error.response.data);
+      console.error("API Error:", error.response.status, error.response.data);
+      res.status(error.response.status).json(error.response.data);
     } else {
-        console.error("HATA MESAJI:", error.message);
+      console.error("Request Error:", error.message);
+      res.status(500).json({ error: "Failed to fetch weather data" });
     }
-    res.status(500).json({ error: "Failed to fetch weather data" });
   }
 });
 
+// Sunucu başlat
 app.listen(PORT, () => {
-  console.log(`✅ Server running on http://localhost:${PORT}`);
+  console.log(`✅ Server running on port ${PORT}`);
 });
-
-console.log("API KEY:", process.env.OPENWEATHER_API_KEY);
