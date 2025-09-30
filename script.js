@@ -6,7 +6,7 @@ function getWeather() {
         return;
     }
 
-    const backendBase = "http://localhost:3000";
+    const backendBase = "https://weather-backend-ufs7.onrender.com";
     const weatherUrl = `${backendBase}/api/weather?city=${encodeURIComponent(city)}`;
 
     fetch(weatherUrl)
